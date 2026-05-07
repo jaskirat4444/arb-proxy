@@ -18,4 +18,14 @@ const matches=JSON.parse(raw.slice(raw.indexOf("{"),raw.lastIndexOf("}")+1)).mat
 const results=matches.map(({pi,ki,note})=>{const pm=poly[pi],km=kalshi[ki];if(!pm||!km)return null;const spread=Math.abs(pm.yes-km.yes),yesCost=Math.min(pm.yes,km.yes),noCost=1-Math.max(pm.yes,km.yes),totalCost=yesCost+noCost;return{polyTitle:pm.title,kalshiTitle:km.title,polyYes:pm.yes,kalshiYes:km.yes,polyUrl:pm.url,kalshiUrl:km.url,note,spread,buyYesOn:pm.yes<=km.yes?"Polymarket":"Kalshi",buyNoOn:pm.yes<=km.yes?"Kalshi":"Polymarket",yesCost,noCost,totalCost,profitPct:((1-totalCost)/totalCost)*100,isArb:(1-totalCost)>0};}).filter(Boolean).sort((a,b)=>b.spread-a.spread);
 res.json({results,source:"live"});
 });
+app.get("/debug",async(req,res)=>{
+const KKEY=process.env.KALSHI_KEY;
+const[p,k]=await Promise.allSettled([
+fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=5&tag_slug=nba"),
+fetch("https://trading-api.kalshi.com/trade-api/v2/markets?status=open&limit=5&series_ticker=NBA",{headers:{"Authorization":`Bearer ${KKEY}`}})
+]);
+const kd=k.status==="fulfilled"&&k.value.ok?await k.value.json():null;
+const pd=p.status==="fulfilled"&&p.value.ok?await p.value.json():null;
+res.json({polyOk:p.status==="fulfilled"&&p.value?.ok,kalshiOk:k.status==="fulfilled"&&k.value?.ok,polyCount:pd?.length,kalshiCount:kd?.markets?.length,kalshiSample:kd?.markets?.slice(0,1),polySample:pd?.slice(0,1)?.map(m=>m.question)});
+});
 app.listen(process.env.PORT||3001,"0.0.0.0",()=>console.log("ready"));
