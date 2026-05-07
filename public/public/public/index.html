@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Arb Scanner — Polymarket × Kalshi</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0f;color:#e2e8f0;min-height:100vh;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback,useRef} = React;
+
+function App(){
+  const [page,setPage]=useState(0);
+  const [countdown,setCountdown]=useState(60);
+  const [calcOpen,setCalcOpen]=useState(null);
+  const [targetProfit,setTargetProfit]=useState(100);
+  const [filter,setFilter]=useState("all");
+  const [opps,setOpps]=React.useState([]);
+  React.useEffect(function(){
+    function load(){
+      fetch("https://overflowing-connection-production-9b0a.up.railway.app/markets")
+        .then(function(r){return r.json();})
+        .then(function(data){
+          if(data.results&&data.results.length>0){
+            setOpps(data.results.map(function(m,i){
+              return{id:i+1,polyTitle:m.polyTitle,kalshiTitle:m.kalshiTitle,polyYes:m.polyYes,kalshiYes:m.kalshiYes,polyUrl:m.polyUrl||"https://polymarket.com",kalshiUrl:m.kalshiUrl||"https://kalshi.com",note:m.note,spread:m.spread,buyYesOn:m.buyYesOn,buyNoOn:m.buyNoOn,yesCost:m.yesCost,noCost:m.noCost,totalCost:m.totalCost,profitPct:m.profitPct,isArb:m.isArb};
+            }));
+          }
+        })
+        .catch(function(){});
+    }
+    load();
+    var t=setInterval(load,60000);
+    return function(){clearInterval(t);};
+  },[]);
+
+  const display=opps.slice(page*5,(page*5)+5);
+  const totalPages=Math.ceil(opps.length/5);
+  const arbCount=display.filter(o=>o.isArb).length;
+  const bestSpread=display.length>0?(Math.max(...display.map(o=>o.spread))*100).toFixed(1):null;
+
+  useEffect(()=>{
+    const iv=setInterval(()=>{
+      setCountdown(c=>{
+        if(c<=1){setPage(p=>(p+1)%Math.max(1,totalPages));return 60;}
+        return c-1;
+      });
+    },1000);
+    return ()=>clearInterval(iv);
+  },[totalPages]);
+
+  const stats=[
+    {label:"Arb opportunities",value:arbCount,color:arbCount>0?"#10b981":"#94a3b8"},
+    {label:"Showing",value:`${page*5+1}–${Math.min(page*5+5,opps.length)} of ${opps.length}`,color:"#818cf8"},
+    {label:"Best spread",value:bestSpread?`${bestSpread}¢`:"-",color:"#f59e0b"},
+    {label:"Data source",value:"Live",color:"#10b981"},
+  ];
+
+  return(
+    <div style={{minHeight:"100vh",background:"#0a0a0f"}}>
+      <div style={{background:"#0f0f1a",borderBottom:"1px solid #1e1e3a",padding:"12px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+          <div style={{background:"#4f46e5",borderRadius:"8px",padding:"6px",fontSize:"20px"}}>⚡</div>
+          <div><div style={{fontWeight:700,fontSize:"16px"}}>Arb Scanner</div><div style={{fontSize:"11px",color:"#64748b"}}>Polymarket × Kalshi · AI-powered</div></div>
+        </div>
+        <div style={{fontSize:"13px",color:"#64748b"}}>Rotating in {countdown}s &nbsp; Page {page+1} of {Math.max(1,totalPages)}</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",borderBottom:"1px solid #1e1e3a"}}>
+        {stats.map((s,i)=>(
+          <div key={i} style={{padding:"16px 24px",borderRight:i<3?"1px solid #1e1e3a":"none"}}>
+            <div style={{fontSize:"10px",letterSpacing:"0.1em",color:"#64748b",marginBottom:"4px",textTransform:"uppercase"}}>{s.label}</div>
+            <div style={{fontSize:"22px",fontWeight:700,color:s.color}}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:"12px"}}>
+        {opps.length===0&&<div style={{textAlign:"center",padding:"60px",color:"#64748b"}}>Loading live markets…</div>}
+        {display.map(opp=>(
+          <div key={opp.id} style={{background:"#0f0f1a",border:"1px solid #1e1e3a",borderRadius:"12px",padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"16px"}}>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"6px"}}>
+                <span style={{background:"#1e3a5f",color:"#60a5fa",fontSize:"10px",fontWeight:700,padding:"2px 6px",borderRadius:"4px"}}>PM</span>
+                <span style={{fontSize:"14px"}}>{opp.polyTitle}</span>
+                <span style={{color:"#60a5fa",fontWeight:600}}>{Math.round(opp.polyYes*100)}¢</span>
+              </div>
+              <div style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"8px"}}>
+                <span style={{background:"#1a3a2f",color:"#34d399",fontSize:"10px",fontWeight:700,padding:"2px 6px",borderRadius:"4px"}}>KSH</span>
+                <span style={{fontSize:"14px"}}>{opp.kalshiTitle}</span>
+                <span style={{color:"#34d399",fontWeight:600}}>{Math.round(opp.kalshiYes*100)}¢</span>
+              </div>
+              {opp.note&&<div style={{fontSize:"12px",color:"#64748b",marginBottom:"10px"}}>🔗 {opp.note}</div>}
+              <div style={{background:"#0a1628",borderRadius:"8px",padding:"10px 14px",fontSize:"13px"}}>
+                → Buy <strong>YES</strong> on {opp.buyYesOn} at {Math.round(Math.min(opp.polyYes,opp.kalshiYes)*100)}¢ + Buy <strong>NO</strong> on {opp.buyNoOn} at {Math.round((1-Math.max(opp.polyYes,opp.kalshiYes))*100)}¢ → costs {Math.round(opp.totalCost*100)}¢, pays $1.00 · <em>before fees</em>
+              </div>
+            </div>
+            <div style={{textAlign:"center",minWidth:"80px"}}>
+              <div style={{background:"#0f2a1f",border:"1px solid #134e35",borderRadius:"10px",padding:"12px 16px"}}>
+                <div style={{fontSize:"22px",fontWeight:700,color:"#10b981"}}>{(opp.spread*100).toFixed(1)}¢</div>
+                <div style={{fontSize:"11px",color:"#64748b"}}>spread</div>
+                <div style={{fontSize:"13px",fontWeight:600,color:"#10b981",marginTop:"4px"}}>+{opp.profitPct.toFixed(1)}%</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+ReactDOM.render(<App/>, document.getElementById('root'));
+</script>
+</body>
+</html>
