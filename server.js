@@ -1,4 +1,4 @@
-// arb-proxy v5 — display-price arbs + liquidity flag (no liquidity gating)
+// arb-proxy v6 — real orderbook avg-fill prices for $stake; liquidity warning flag
 const express=require("express"),cors=require("cors"),fetch=require("node-fetch"),app=express();
 app.use(cors());
 
@@ -167,14 +167,14 @@ async function computeMarkets(stake){
   // Also fetch order books in parallel and compute lowLiquidity flag.
   const enriched=await Promise.all(dedup.map(async({pi,ki,note})=>{
               const pm=poly[pi],km=kalshi[ki];if(!pm||!km)return null;
-              const yesCost=Math.min(pm.yes,km.yes);
-              const noCost=1-Math.max(pm.yes,km.yes);
-              const totalCost=yesCost+noCost;
-              if(totalCost>=1)return null; // not a displayed arb — skip
+              let yesCost=Math.min(pm.yes,km.yes);
+              let noCost=1-Math.max(pm.yes,km.yes);
+              let totalCost=yesCost+noCost;
+              if(totalCost>=1.5)return null; // far from arb on display prices — skip
                                                  const buyYesOn=pm.yes<=km.yes?"Polymarket":"Kalshi";
               const buyNoOn=pm.yes<=km.yes?"Kalshi":"Polymarket";
-              const spread=Math.abs(pm.yes-km.yes);
-              const profitPct=((1-totalCost)/totalCost)*100;
+              let spread=Math.abs(pm.yes-km.yes);
+              let profitPct=((1-totalCost)/totalCost)*100;
 
                                                  // Liquidity check (does NOT gate). Determines lowLiquidity flag.
                                                  let lowLiquidity=false,liqDetail=null;
@@ -188,7 +188,7 @@ async function computeMarkets(stake){
                             const noFill=noAsks?walkAsks(noAsks,stake):null;
                             const yesOK=yesFill&&yesFill.spent>=LOW_LIQ_THRESHOLD;
                             const noOK=noFill&&noFill.spent>=LOW_LIQ_THRESHOLD;
-                            lowLiquidity=!(yesOK&&noOK);
+                            lowLiquidity=!(yesOK&&noOK);if(yesFill&&yesFill.avgPrice!=null&&noFill&&noFill.avgPrice!=null){yesCost=yesFill.avgPrice;noCost=noFill.avgPrice;totalCost=yesCost+noCost;spread=Math.max(0,1-totalCost);profitPct=totalCost>0?(spread/totalCost)*100:0;const bestYes=yesAsks&&yesAsks[0]?yesAsks[0].price:yesCost;const bestNo=noAsks&&noAsks[0]?noAsks[0].price:noCost;const yesSlip=yesCost-bestYes;const noSlip=noCost-bestNo;if(yesSlip>0.05||noSlip>0.05)lowLiquidity=true;}
                             liqDetail={yesSpent:yesFill?.spent??0,noSpent:noFill?.spent??0,yesAvg:yesFill?.avgPrice??null,noAvg:noFill?.avgPrice??null};
               }catch{lowLiquidity=true;}
 
@@ -205,7 +205,7 @@ async function computeMarkets(stake){
                                                  };
   }));
 
-  const results=enriched.filter(Boolean).sort((a,b)=>b.spread-a.spread);
+  const results=enriched.filter(o=>o&&o.spread>0&&o.totalCost<1).sort((a,b)=>b.spread-a.spread);
           return{results,source:"live",polyCount:poly.length,kalshiCount:kalshi.length,candidateCount:candidates.length,matchCount:results.length,stake};
 }
 
