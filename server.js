@@ -4,7 +4,7 @@ app.get("/debug",async(req,res)=>{
 const KKEY=process.env.KALSHI_KEY;
 const[p,k]=await Promise.allSettled([
 fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=5&tag_slug=sports"),
-fetch("https://trading-api.kalshi.com/trade-api/v2/markets?status=open&limit=5",{headers:{"kalshi-access-key":KKEY}})
+fetch("https://trading-api.kalshi.com/trade-api/v2/markets?status=open&limit=5")
 ]);
 const kd=k.status==="fulfilled"&&k.value.ok?await k.value.json():null;
 const pd=p.status==="fulfilled"&&p.value.ok?await p.value.json():null;
@@ -13,7 +13,7 @@ res.json({polyOk:p.status==="fulfilled"&&p.value?.ok,kalshiOk:k.status==="fulfil
 app.get("/markets",async(req,res)=>{
 const KEY=process.env.ANTHROPIC_KEY;
 const KKEY=process.env.KALSHI_KEY;
-const[p,k]=await Promise.allSettled([
+fetch("https://trading-api.kalshi.com/trade-api/v2/markets?status=open&limit=50")
 fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=50&order=volume&ascending=false&tag_slug=sports"),
 fetch("https://trading-api.kalshi.com/trade-api/v2/markets?status=open&limit=50",{headers:{"kalshi-access-key":KKEY}})
 ]);
