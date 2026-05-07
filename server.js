@@ -35,7 +35,7 @@ app.get("/markets",async(req,res)=>{
       fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=100&order=volume&ascending=false"),
       fetch(BASE+kpath,{headers:kalshiHeaders("GET",kpath)})
     ]);
-    const poly=p.status==="fulfilled"&&p.value.ok?(await p.value.json()).map(m=>({title:m.question,yes:parseFloat(m.outcomePrices?.[0]??0.5),url:`https://polymarket.com/event/${m.slug}`})).filter(m=>m.yes>0.05&&m.yes<0.95):[];
+   const poly=p.status==="fulfilled"&&p.value.ok?(await p.value.json()).map(m=>({title:m.question,yes:parseFloat(JSON.parse(m.outcomePrices||"[0.5]")?.[0]??0.5),url:`https://polymarket.com/event/${m.slug}`})).filter(m=>m.yes>0.05&&m.yes<0.95):[];
     const kd=k.status==="fulfilled"&&k.value.ok?await k.value.json():null;
     const kalshi=kd?.markets?kd.markets.map(m=>({title:m.title,yes:(m.last_price??50)/100,url:`https://kalshi.com/markets/${m.ticker}`})).filter(m=>m.yes>0&&m.yes<1):[];
     if(!poly.length||!kalshi.length)return res.json({results:[],source:"unavailable",polyCount:poly.length,kalshiCount:kalshi.length});
