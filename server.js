@@ -14,13 +14,15 @@ function kalshiHeaders(method,path){
   return{"KALSHI-ACCESS-KEY":KEY_ID,"KALSHI-ACCESS-TIMESTAMP":ts,"KALSHI-ACCESS-SIGNATURE":signature,"Content-Type":"application/json"};
 }
 
-fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=5&order=volume&ascending=false"),
+function getYes(m){try{const p=JSON.parse(m.outcomePrices);return parseFloat(p[0]);}catch{return 0.5;}}
+
+app.get("/debug",async(req,res)=>{
   try{
     const path="/trade-api/v2/markets?status=open&limit=5";
     const[p,k]=await Promise.allSettled([
       fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=5&order=volume&ascending=false"),
       fetch(BASE+path,{headers:kalshiHeaders("GET",path)})
-    ]);
+      ]);
     const pd=p.status==="fulfilled"&&p.value.ok?await p.value.json():null;
     const kd=k.status==="fulfilled"&&k.value.ok?await k.value.json():null;
     res.json({polyOk:p.value?.ok,kalshiOk:k.value?.ok,kalshiStatus:k.value?.status,polyCount:pd?.length,kalshiCount:kd?.markets?.length,kalshiSample:kd?.markets?.slice(0,3)?.map(m=>m.title),polySample:pd?.slice(0,3)?.map(m=>m.question)});
@@ -34,8 +36,8 @@ app.get("/markets",async(req,res)=>{
     const[p,k]=await Promise.allSettled([
       fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=100&order=volume&ascending=false"),
       fetch(BASE+kpath,{headers:kalshiHeaders("GET",kpath)})
-    ]);
-   const poly=p.status==="fulfilled"&&p.value.ok?(await p.value.json()).map(m=>({title:m.question,yes:parseFloat(JSON.parse(m.outcomePrices||"[0.5]")?.[0]??0.5),url:`https://polymarket.com/event/${m.slug}`})).filter(m=>m.yes>0.05&&m.yes<0.95):[];
+      ]);
+    const poly=p.status==="fulfilled"&&p.value.ok?(await p.value.json()).map(m=>({title:m.question,yes:getYes(m),url:`https://polymarket.com/event/${m.slug}`})).filter(m=>m.yes>0.05&&m.yes<0.95):[];
     const kd=k.status==="fulfilled"&&k.value.ok?await k.value.json():null;
     const kalshi=kd?.markets?kd.markets.map(m=>({title:m.title,yes:(m.last_price??50)/100,url:`https://kalshi.com/markets/${m.ticker}`})).filter(m=>m.yes>0&&m.yes<1):[];
     if(!poly.length||!kalshi.length)return res.json({results:[],source:"unavailable",polyCount:poly.length,kalshiCount:kalshi.length});
