@@ -12,6 +12,23 @@ const LOW_LIQ_THRESHOLD=50; // if a leg can't fill at least $50, flag low-liquid
 let lastResponse=null,lastResponseAt=0,refreshing=false;
 const STALE_AFTER_MS=60_000;
 
+
+// v6.3: timeline-match guard. Returns true if both titles share the same resolution year/window.
+function timelineMatch(a,b){
+  const A = (a||"").toLowerCase();
+  const B = (b||"").toLowerCase();
+  const yA = A.match(/20\d\d/g) || [];
+  const yB = B.match(/20\d\d/g) || [];
+  if(yA.length===0 && yB.length===0) return true;
+  if(yA.length===0 || yB.length===0){
+    const noYearSide = yA.length===0 ? A : B;
+    if(/\bbefore\b|\bby\s+20|\bseason\b|\bbefore\s+the\b/.test(noYearSide)) return false;
+    return true;
+  }
+  const setA = new Set(yA); const setB = new Set(yB);
+  for(const y of setA){ if(setB.has(y)) return true; }
+  return false;
+}
 function getYes(m){try{const p=JSON.parse(m.outcomePrices);return parseFloat(p[0]);}catch{return 0.5;}}
 function getClobIds(m){try{return JSON.parse(m.clobTokenIds||"[]");}catch{return[];}}
 
@@ -213,7 +230,7 @@ async function computeMarkets(stake){
                                                  };
   }));
 
-  const results=enriched.filter(o=>o&&o.spread>0&&o.totalCost<1).sort((a,b)=>b.spread-a.spread);
+  const results=enriched.filter(o=>o&&o.spread>0&&o.totalCost<1&&timelineMatch(o.polyTitle,o.kalshiTitle)).sort((a,b)=>b.spread-a.spread);
           return{results,source:"live",polyCount:poly.length,kalshiCount:kalshi.length,candidateCount:candidates.length,matchCount:results.length,stake};
 }
 
