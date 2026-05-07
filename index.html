@@ -72,29 +72,29 @@ function App(){
       <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:"12px"}}>
         {loading&&opps.length===0&&<div style={{textAlign:"center",padding:"60px",color:"#64748b"}}>Fetching live markets from Railway…</div>}
         {display.map(function(opp){return(
-          <div key={opp.id} style={{background:"#0f0f1a",border:"1px solid #1e1e3a",borderRadius:"12px",padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"16px"}}>
-            <div style={{flex:1}}>
+          <div key={opp.id} style={{background:opp.lowLiquidity?"#1f1407":"#0f0f1a",border:opp.lowLiquidity?"1px solid #f59e0b":"1px solid #1e1e3a",borderRadius:"12px",padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"16px"}}>
+            <div style={{flex:1}}>{opp.lowLiquidity&&<div style={{display:"inline-flex",alignItems:"center",gap:"6px",background:"#f59e0b",color:"#1a1004",fontSize:"11px",fontWeight:700,padding:"3px 8px",borderRadius:"4px",marginBottom:"8px",letterSpacing:"0.05em"}}>⚠️ LOW LIQUIDITY — ACTUAL FILL PRICE MAY DIFFER</div>}
               <div style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"6px"}}>
                 <span style={{background:"#1e3a5f",color:"#60a5fa",fontSize:"10px",fontWeight:700,padding:"2px 6px",borderRadius:"4px"}}>PM</span>
                 <span>{opp.polyTitle}</span>
-                <span style={{color:"#60a5fa",fontWeight:600}}>{Math.round(opp.polyYes*100)}¢</span>
+                <span style={{color:"#60a5fa",fontWeight:600}}>{Math.round((opp.buyYesOn==="Polymarket"?opp.yesCost:1-opp.noCost)*100)}¢</span>
                 <a href={opp.polyUrl} target="_blank" style={{color:"#60a5fa",fontSize:"11px"}}>↗</a>
               </div>
               <div style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"8px"}}>
                 <span style={{background:"#1a3a2f",color:"#34d399",fontSize:"10px",fontWeight:700,padding:"2px 6px",borderRadius:"4px"}}>KSH</span>
                 <span>{opp.kalshiTitle}</span>
-                <span style={{color:"#34d399",fontWeight:600}}>{Math.round(opp.kalshiYes*100)}¢</span>
+                <span style={{color:"#34d399",fontWeight:600}}>{Math.round((opp.buyYesOn==="Kalshi"?opp.yesCost:1-opp.noCost)*100)}¢</span>
                 <a href={opp.kalshiUrl} target="_blank" style={{color:"#34d399",fontSize:"11px"}}>↗</a>
               </div>
               {opp.note&&<div style={{fontSize:"12px",color:"#64748b",marginBottom:"10px"}}>🔗 {opp.note}</div>}
               <div style={{background:"#0a1628",borderRadius:"8px",padding:"10px 14px",fontSize:"13px"}}>
-                → Buy <strong>YES</strong> on {opp.buyYesOn} at {Math.round(Math.min(opp.polyYes,opp.kalshiYes)*100)}¢ + Buy <strong>NO</strong> on {opp.buyNoOn} at {Math.round((1-Math.max(opp.polyYes,opp.kalshiYes))*100)}¢ → costs {Math.round(opp.totalCost*100)}¢, pays $1.00 · <em>before fees</em>
+                → Buy <strong>YES</strong> on {opp.buyYesOn} at {Math.round(opp.yesCost*100)}¢ + Buy <strong>NO</strong> on {opp.buyNoOn} at {Math.round(opp.noCost*100)}¢ → costs {Math.round(opp.totalCost*100)}¢, pays $1.00 · <em>before fees</em>
               </div>
             </div>
             <div style={{textAlign:"center",minWidth:"80px"}}>
               <div style={{background:"#0f2a1f",border:"1px solid #134e35",borderRadius:"10px",padding:"12px 16px"}}>
                 <div style={{fontSize:"22px",fontWeight:700,color:"#10b981"}}>{(opp.spread*100).toFixed(1)}¢</div>
-                <div style={{fontSize:"11px",color:"#64748b"}}>{opp.lowLiquidity?"⚠ low liq":"spread"}</div>
+                <div style={{fontSize:opp.lowLiquidity?"12px":"11px",fontWeight:opp.lowLiquidity?700:400,color:opp.lowLiquidity?"#f59e0b":"#64748b"}}>{opp.lowLiquidity?"⚠️ LOW LIQUIDITY":"spread"}</div>
                 <div style={{fontSize:"13px",fontWeight:600,color:"#10b981",marginTop:"4px"}}>+{opp.profitPct.toFixed(1)}%</div>
               </div>
             </div>
