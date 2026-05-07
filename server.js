@@ -67,11 +67,11 @@ async function kalshiBook(ticker){
                   const r=await fetch(`${KALSHI_BASE}/trade-api/v2/markets/${encodeURIComponent(ticker)}/orderbook?depth=50`);
                   if(!r.ok)return null;
                   const j=await r.json();
-                  const ob=j.orderbook||{};
+                  const ob=j.orderbook_fp||j.orderbook||{};
                   // Kalshi: ob.yes = bids on YES, ob.no = bids on NO. Each entry [priceCents, size].
           // Ask price for YES = 1 - bestNoBid; ask price for NO = 1 - bestYesBid.
-          const yesBids=(ob.yes||[]).map(([p,s])=>({price:p/100,size:s})).filter(x=>x.size>0);
-                  const noBids=(ob.no||[]).map(([p,s])=>({price:p/100,size:s})).filter(x=>x.size>0);
+          const yesBids=(ob.yes_dollars||[]).map(([p,s])=>({price:parseFloat(p),size:parseFloat(s)})).filter(x=>x.size>0);
+                  const noBids=(ob.no_dollars||[]).map(([p,s])=>({price:parseFloat(p),size:parseFloat(s)})).filter(x=>x.size>0);
                   const yesAsks=noBids.map(x=>({price:1-x.price,size:x.size})).filter(x=>x.price>0&&x.price<1).sort((a,b)=>a.price-b.price);
                   const noAsks=yesBids.map(x=>({price:1-x.price,size:x.size})).filter(x=>x.price>0&&x.price<1).sort((a,b)=>a.price-b.price);
                   return{yesAsks,noAsks};
