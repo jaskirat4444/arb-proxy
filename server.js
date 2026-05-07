@@ -5,7 +5,7 @@ const MP=[{id:"pm1",title:"Will the Fed cut rates at June 2026 FOMC?",yes:0.38,u
 const MK=[{id:"k1",title:"Fed cuts rates June 2026",yes:0.41,url:"https://kalshi.com"},{id:"k2",title:"Bitcoin above $120k by July 1 2026",yes:0.26,url:"https://kalshi.com"},{id:"k3",title:"S&P 500 above 5800 end of May 2026",yes:0.65,url:"https://kalshi.com"},{id:"k4",title:"US recession in 2026",yes:0.31,url:"https://kalshi.com"},{id:"k5",title:"Elon Musk leaves DOGE in 2026",yes:0.53,url:"https://kalshi.com"}];
 app.get("/markets",async(req,res)=>{
 try{
-const[p,k]=await Promise.allSettled([fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=50&order=volume&ascending=false&tag_slug=politics"),"),fetch("https://trading-api.kalshi.com/trade-api/v2/markets?status=open&limit=50")]);
+const[p,k]=await Promise.allSettled([fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=50&order=volume&ascending=false&tag_slug=politics"),fetch("https://trading-api.kalshi.com/trade-api/v2/markets?status=open&limit=50")]);
 const poly=p.status==="fulfilled"&&p.value.ok?(await p.value.json()).slice(0,50).map(m=>({id:m.id,title:m.question,yes:parseFloat(m.outcomePrices?.[0]??0.5),url:`https://polymarket.com/event/${m.slug}`})).filter(m=>m.yes>0&&m.yes<1):MP;
 const kd=k.status==="fulfilled"&&k.value.ok?await k.value.json():null;
 const kalshi=kd?.markets?kd.markets.slice(0,50).map(m=>({id:m.ticker,title:m.title,yes:(m.last_price??50)/100,url:`https://kalshi.com/markets/${m.ticker}`})).filter(m=>m.yes>0&&m.yes<1):MK;
