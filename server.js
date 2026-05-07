@@ -33,4 +33,47 @@ app.get("/markets", async (req, res) => {
       ? (await p.value.json()).slice(0,50).map(m=>({id:m.id,title:m.question,yes:parseFloat(m.outcomePrices?.[0]??0.5),url:`https://polymarket.com/event/${m.slug}`})).filter(m=>m.yes>0&&m.yes<1)
       : MOCK_P;
 
-    const kd = k.status==="fulfilled" && k.value.ok ? await k.value.json
+    const kd = k.status==="fulfilled" && k.value.ok ? await k.value.json() : null;
+    const kalshi = kd?.markets
+      ? kd.markets.slice(0,50).map(m=>({id:m.ticker,title:m.title,yes:(m.last_price??50)/100,url:`https://kalshi.com/markets/${m.ticker}`})).filter(m=>m.yes>0&&m.yes<1)
+      : MOCK_K;
+
+    const isDemo = !kd && p.status!=="fulfilled";
+
+    const prompt = `You are a JSON API. Match prediction markets on the IDENTICAL event.
+POLYMARKET: ${poly.map((m,i)=>`[${i}]${m.title} YES=${Math.round(m.yes*100)}c`).join(" | ")}
+KALSHI: ${kalshi.map((m,i)=>`[${i}]${m.title} YES=${Math.round(m.yes*100)}c`).join(" | ")}
+Reply with ONLY valid JSON like this: {"matches":[{"pi":0,"ki":0,"note":"reason"}]}`;
+
+    const ai = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":KEY,"anthropic-version":"2023-06-01"},
+      body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:1000,messages:[{role:"user",content:prompt}]})
+    });
+
+    const aiJson = await ai.json();
+    const raw = (aiJson.content?.[0]?.text || '{"matches":[]}').replace(/```json|```/g,"").trim();
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    const cleaned = raw.slice(start, end+1);
+    const matches = JSON.parse(cleaned).matches || [];
+
+    const results = matches.map(({pi,ki,note})=>{
+      const pm=poly[pi], km=kalshi[ki];
+      if(!pm||!km) return null;
+      const spread=Math.abs(pm.yes-km.yes);
+      const yesCost=Math.min(pm.yes,km.yes);
+      const noCost=1-Math.max(pm.yes,km.yes);
+      const totalCost=yesCost+noCost;
+      return {polyTitle:pm.title,kalshiTitle:km.title,polyYes:pm.yes,kalshiYes:km.yes,polyUrl:pm.url,kalshiUrl:km.url,note,spread,buyYesOn:pm.yes<=km.yes?"Polymarket":"Kalshi",buyNoOn:pm.yes<=km.yes?"Kalshi":"Polymarket",yesCost,noCost,totalCost,profitPct:((1-totalCost)/totalCost)*100,isArb:(1-totalCost)>0};
+    }).filter(Boolean).sort((a,b)=>b.spread-a.spread);
+
+    res.json({results, source: isDemo?"demo":"live"});
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({error:e.message});
+  }
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
