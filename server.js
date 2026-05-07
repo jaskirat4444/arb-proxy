@@ -192,6 +192,14 @@ async function computeMarkets(stake){
                             liqDetail={yesSpent:yesFill?.spent??0,noSpent:noFill?.spent??0,yesAvg:yesFill?.avgPrice??null,noAvg:noFill?.avgPrice??null};
               }catch{lowLiquidity=true;}
 
+                                                 // v6.1: override display prices with real avg-fill prices when orderbook fills are available
+                                                 if(liqDetail && liqDetail.yesSpent>=stake*0.5 && liqDetail.noSpent>=stake*0.5){
+                                                   yesCost = liqDetail.yesAvg;
+                                                   noCost  = liqDetail.noAvg;
+                                                   totalCost = yesCost + noCost;
+                                                   spread = 1 - totalCost;
+                                                   profitPct = totalCost > 0 ? (spread / totalCost) * 100 : 0;
+                                                 }
                                                  return{
                                                                polyTitle:pm.title,kalshiTitle:km.title,
                                                                polyYes:pm.yes,kalshiYes:km.yes,
