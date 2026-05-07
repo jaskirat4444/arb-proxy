@@ -232,6 +232,3 @@ app.get("/markets",async(req,res)=>{
 
 app.get("/",(req,res)=>res.json({ok:true,version:"v5",endpoints:["/markets","/markets?stake=100","/debug"]}));
 app.listen(process.env.PORT||3001,"0.0.0.0",()=>console.log("ready"));
-
-app.get("/",(req,res)=>res.json({ok:true,version:"v5",endpoints:["/markets","/markets?stake=100","/debug"]}));
-app.listen(process.env.PORT||3001,"0.0.0.0",()=>console.log("ready"));
