@@ -14,7 +14,7 @@ function kalshiHeaders(method,path){
   return{"KALSHI-ACCESS-KEY":KEY_ID,"KALSHI-ACCESS-TIMESTAMP":ts,"KALSHI-ACCESS-SIGNATURE":signature,"Content-Type":"application/json"};
 }
 
-app.get("/debug",async(req,res)=>{
+fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=5&order=volume&ascending=false"),
   try{
     const path="/trade-api/v2/markets?status=open&limit=5";
     const[p,k]=await Promise.allSettled([
