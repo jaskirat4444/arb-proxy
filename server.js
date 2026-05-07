@@ -17,4 +17,10 @@ const results=matches.map(({pi,ki,note})=>{const pm=poly[pi],km=kalshi[ki];if(!p
 res.json({results,source:poly===MP?"demo":"live"});
 }catch(e){console.error(e);res.status(500).json({error:e.message});}
 });
+app.get("/debug",async(req,res)=>{
+const[p,k]=await Promise.allSettled([fetch("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=5&order=volume&ascending=false"),fetch("https://trading-api.kalshi.com/trade-api/v2/markets?status=open&limit=5")]);
+const pd=p.status==="fulfilled"&&p.value.ok?await p.value.json():null;
+const kd=k.status==="fulfilled"&&k.value.ok?await k.value.json():null;
+res.json({polyOk:p.status==="fulfilled"&&p.value.ok,kalshiOk:k.status==="fulfilled"&&k.value.ok,polySample:pd?pd.slice(0,2):null,kalshiSample:kd?.markets?kd.markets.slice(0,2):null});
+});
 app.listen(process.env.PORT||3001,"0.0.0.0",()=>console.log("ready"));
